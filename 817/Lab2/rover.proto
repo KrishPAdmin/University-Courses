@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package rover;
+
+service GroundControl {
+  rpc GetMap(MapRequest) returns (MapResponse);
+  rpc StreamCommands(CommandRequest) returns (stream CommandChunk);
+  rpc GetMineSerial(MineSerialRequest) returns (MineSerialResponse);
+  rpc ReportExecution(ExecutionReport) returns (Ack);
+  rpc ShareMinePin(MinePin) returns (Ack);
+}
+
+message MapRequest {
+  int32 rover_id = 1;
+}
+
+message MapResponse {
+  repeated string rows = 1;
+  int32 width = 2;
+  int32 height = 3;
+  int32 start_x = 4;
+  int32 start_y = 5;
+}
+
+message CommandRequest {
+  int32 rover_id = 1;
+}
+
+message CommandChunk {
+  string chunk = 1;
+  bool is_last = 2;
+}
+
+message MineSerialRequest {
+  int32 rover_id = 1;
+  int32 x = 2;
+  int32 y = 3;
+}
+
+message MineSerialResponse {
+  bool found = 1;
+  string serial = 2;
+  string message = 3;
+}
+
+message MinePin {
+  int32 rover_id = 1;
+  int32 x = 2;
+  int32 y = 3;
+  string serial = 4;
+  string pin = 5;
+}
+
+message ExecutionReport {
+  int32 rover_id = 1;
+  bool success = 2;
+  bool exploded = 3;
+  int32 commands_total = 4;
+  int32 commands_executed = 5;
+  int32 final_x = 6;
+  int32 final_y = 7;
+  string message = 8;
+}
+
+message Ack {
+  bool ok = 1;
+  string message = 2;
+}
