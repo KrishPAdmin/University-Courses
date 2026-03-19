@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lab 4 Rover Control Plane</title>
+  <link rel="icon" href="https://krishadmin.com/pics/LimeK.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --accent: #20fd14;
+      --bg: #000;
+      --glassBg: rgba(12, 14, 16, 0.82);
+      --glassBorder: rgba(255,255,255,0.10);
+      --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      --textSub: rgb(149, 149, 149);
+      --titleShadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+      --headerH: 7.2rem;
+      --warn: #ffd86f;
+      --danger: #ff9a9a;
+      --soft: rgba(255,255,255,0.05);
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html {
+      font-size: 62.5%;
+      scroll-behavior: smooth;
+      font-family: "Source Sans 3", system-ui, sans-serif;
+    }
+    body {
+      background-color: var(--bg);
+      color: #fff;
+      line-height: 1.5;
+      overflow-x: hidden;
+      position: relative;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        linear-gradient(to right, rgba(0, 0, 0, 0.80), rgba(37, 44, 49, 0.80)),
+        url("https://krishadmin.com/svg/common-bg.svg");
+      background-position: center;
+      background-size: cover;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image: url("https://krishadmin.com/pics/LimeK.png");
+      background-repeat: no-repeat;
+      background-position: right 4% bottom 6%;
+      background-size: clamp(180px, 22vw, 360px);
+      opacity: 0.08;
+    }
+    a { text-decoration: none; color: inherit; }
+    button, input, select, option, textarea { font: inherit; }
+    select, option { background: #141414; color: #fff; }
+
+    .header {
+      position: fixed;
+      inset: 0 0 auto 0;
+      width: 100%;
+      z-index: 1000;
+      background: var(--glassBg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--glassBorder);
+    }
+    .header__content {
+      min-height: var(--headerH);
+      width: calc(100vw - 2rem);
+      margin: 0 auto;
+      padding: 0 0.3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+    .header__logo-container {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      color: var(--accent);
+      flex: 0 0 auto;
+    }
+    .header__logo-img-cont {
+      width: 5.2rem;
+      height: 5.2rem;
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--accent);
+    }
+    .header__logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .header__logo-sub {
+      font-size: 1.7rem;
+      text-transform: uppercase;
+      font-weight: 900;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    .header__links {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 0.2rem;
+      flex: 1 1 auto;
+    }
+    .header__link {
+      padding: 0.95rem 1.15rem;
+      font-size: 1.3rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 900;
+      border-radius: 10px;
+      transition: background 0.2s ease, filter 0.2s ease;
+      white-space: nowrap;
+    }
+    .header__link:hover {
+      filter: brightness(1.10);
+      background: rgba(32, 253, 20, 0.10);
+    }
+
+    .page-shell {
+      width: min(75vw, 170rem);
+      max-width: calc(100vw - 2rem);
+      margin: 0 auto;
+      padding: calc(var(--headerH) + 1.2rem) 0 3rem 0;
+    }
+    .glass-panel {
+      background: var(--glassBg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--glassBorder);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+    .section { margin-bottom: 1.4rem; }
+    .section__panel { width: 100%; padding: 1.7rem; }
+
+    .intro-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.4rem;
+    }
+    .intro-strip__line1 {
+      font-size: clamp(4.2rem, 4.8vw, 6.6rem);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: var(--titleShadow);
+      line-height: 1.02;
+    }
+    .intro-strip__actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      flex: 0 0 auto;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.4rem;
+      margin-bottom: 1.5rem;
+    }
+    .section-heading__left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .heading-sec__main {
+      display: inline-block;
+      font-size: clamp(2.8rem, 3vw, 4.3rem);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      position: relative;
+      font-weight: 900;
+      text-shadow: var(--titleShadow);
+      color: #fff;
+      line-height: 1.08;
+    }
+    .heading-sec__main::after {
+      content: "";
+      position: absolute;
+      top: calc(100% + 0.8rem);
+      left: 0;
+      height: 5px;
+      width: 3rem;
+      background: var(--accent);
+      border-radius: 999px;
+    }
+    .meta-right {
+      display: flex;
+      align-items: center;
+      gap: 1.6rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .refresh-meta {
+      font-size: 1.35rem;
+      color: var(--textSub);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .btn {
+      background: #000;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      transition: transform 0.2s ease, filter 0.2s ease, color 0.2s ease;
+      border: 0;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.04);
+      color: #fff;
+    }
+    .btn--bg { padding: 1.25rem 2.2rem; font-size: 1.42rem; }
+    .btn--med { padding: 0.95rem 1.7rem; font-size: 1.28rem; }
+    .btn--theme { background: var(--accent); color: #000; }
+    .btn--danger { background: #2d0d0d; color: #ffb2b2; }
+    .btn--warn { background: #2d240a; color: var(--warn); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(34rem, 1fr);
+      gap: 1.5rem;
+      align-items: start;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 1.55rem;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+    .card h3 {
+      font-size: 2rem;
+      font-weight: 900;
+      margin-bottom: 0.35rem;
+      color: #fff;
+      text-shadow: var(--titleShadow);
+    }
+    .muted { color: var(--textSub); }
+    .mono {
+      font-family: Consolas, monospace;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 0.95rem;
+    }
+    .pill {
+      display: inline-block;
+      padding: 0.45rem 1rem;
+      border-radius: 999px;
+      font-size: 1.15rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .good { background: rgba(32,253,20,0.18); color: #9aff8f; }
+    .warn { background: rgba(251,191,36,0.18); color: #ffd86f; }
+    .bad { background: rgba(248,113,113,0.18); color: #ff9a9a; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.95rem;
+      margin-top: 1.35rem;
+    }
+    .stat {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 1.15rem;
+      border: 1px solid rgba(255,255,255,0.08);
+      min-width: 0;
+    }
+    .stat__label {
+      font-size: 1.12rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--textSub);
+      font-weight: 900;
+    }
+    .stat__value {
+      margin-top: 0.42rem;
+      font-size: 1.95rem;
+      font-weight: 900;
+      color: #fff;
+      word-break: break-word;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin-top: 1.35rem;
+      align-items: end;
+    }
+    .form-grid--map {
+      grid-template-columns: minmax(10rem, 0.6fr) minmax(10rem, 0.6fr) minmax(16rem, 1fr) minmax(16rem, 1fr);
+    }
+    .form-grid--rover {
+      grid-template-columns: minmax(12rem, 0.5fr) minmax(0, 1.8fr);
+    }
+    .form-actions {
+      margin-top: 1.1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    label {
+      display: block;
+      font-size: 1.12rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      font-weight: 900;
+      margin-bottom: 0.55rem;
+    }
+    input, select, textarea {
+      width: 100%;
+      min-height: 4.6rem;
+      padding: 1rem 1.1rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      font-size: 1.45rem;
+    }
+    textarea {
+      min-height: 14rem;
+      resize: vertical;
+      white-space: pre-wrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.95rem;
+      table-layout: fixed;
+    }
+    th, td {
+      padding: 0.92rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+      font-size: 1.35rem;
+      vertical-align: top;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    th {
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 900;
+      font-size: 1.12rem;
+    }
+    tbody tr[data-clickable="1"] {
+      cursor: pointer;
+    }
+    tbody tr[data-clickable="1"]:hover {
+      background: rgba(32,253,20,0.06);
+    }
+    .selected-row {
+      background: rgba(32,253,20,0.10) !important;
+    }
+
+    .map-board {
+      display: grid;
+      gap: 0.8rem;
+      margin-top: 1.3rem;
+    }
+    .map-row {
+      display: grid;
+      gap: 0.8rem;
+    }
+    .map-cell {
+      min-height: 6rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      font-size: 1.28rem;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+      padding: 0.8rem;
+    }
+    .map-cell:hover {
+      transform: translateY(-1px);
+      border-color: rgba(32,253,20,0.45);
+    }
+    .map-cell--empty { color: var(--textSub); }
+    .map-cell--mine { background: rgba(251,191,36,0.16); color: var(--warn); }
+    .map-cell--defused { background: rgba(32,253,20,0.16); color: #9aff8f; }
+    .map-cell--rover { background: rgba(32,253,20,0.22); color: #fff; }
+    .map-cell--selected { outline: 2px solid var(--accent); }
+
+    .console-box {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 1.2rem;
+      margin-top: 1rem;
+      min-height: 22rem;
+      font-family: Consolas, monospace;
+      font-size: 1.3rem;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      overflow-x: auto;
+    }
+    .console-box--small {
+      min-height: 18rem;
+    }
+
+    .main-footer { padding-top: 0.2rem; }
+    .footer__panel { width: 100%; padding: 1.8rem; }
+    .main-footer__upper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      margin-bottom: 1.7rem;
+    }
+    .heading-sm {
+      color: #fff;
+      font-size: 1.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 900;
+      text-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    }
+    .main-footer__social-cont {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.1rem;
+      flex-wrap: wrap;
+    }
+    .main-footer__icon {
+      width: 2.6rem;
+      height: 2.6rem;
+      object-fit: contain;
+    }
+    .main-footer__lower {
+      padding-top: 1.7rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 1.45rem;
+      color: var(--textSub);
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    @media (max-width: 1450px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
+      .page-shell { width: min(84vw, 150rem); }
+    }
+    @media (max-width: 1100px) {
+      .page-shell { width: calc(100vw - 2rem); }
+      .main-footer__upper { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 950px) {
+      .form-grid,
+      .form-grid--map,
+      .form-grid--rover,
+      .stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 800px) {
+      .header__content {
+        flex-direction: column;
+        justify-content: center;
+        padding: 1rem 0.8rem;
+        min-height: auto;
+      }
+      .header__links { justify-content: center; }
+      .page-shell {
+        padding-top: 15rem;
+        width: calc(100vw - 2rem);
+      }
+      .intro-strip {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .section-heading {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .refresh-meta { white-space: normal; }
+    }
+    @media (max-width: 700px) {
+      .form-grid,
+      .form-grid--map,
+      .form-grid--rover,
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header__content">
+      <a class="header__logo-container" href="/" aria-label="Home">
+        <div class="header__logo-img-cont">
+          <img src="https://krishadmin.com/pics/Krish_Patel_Face.jpg" alt="Krish Patel" class="header__logo-img" />
+        </div>
+        <span class="header__logo-sub">Krish Patel</span>
+      </a>
+      <div class="header__links">
+        <a href="/" class="header__link">Home</a>
+        <a href="/docs" class="header__link" target="_blank" rel="noopener noreferrer">Docs</a>
+        <a href="#mapSection" class="header__link">Map</a>
+        <a href="#mineSection" class="header__link">Mines</a>
+        <a href="#roverSection" class="header__link">Rovers</a>
+        <a href="#outputSection" class="header__link">Output</a>
+        <a href="/logout" class="header__link">Logout</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="section">
+      <div class="glass-panel section__panel intro-strip">
+        <div class="intro-strip__line1">Lab 4 Rover Operations Dashboard</div>
+        <div class="intro-strip__actions">
+          <a href="/docs" class="btn btn--bg btn--theme" target="_blank" rel="noopener noreferrer">Open FastAPI Docs</a>
+          <button id="pageRefreshBtn" type="button" class="btn btn--bg">Refresh Data</button>
+          <button id="resetDemoBtn" type="button" class="btn btn--bg btn--warn">Reset Demo</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="glass-panel section__panel">
+        <div class="section-heading">
+          <div class="section-heading__left">
+            <span class="heading-sec__main">Overview</span>
+          </div>
+          <div class="meta-right">
+            <div class="refresh-meta">Current user: <span class="mono" id="currentUser">n/a</span></div>
+            <div class="refresh-meta">Last updated: <span id="lastUpdated">n/a</span></div>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3>Map Size</h3>
+            <div class="pill-row">
+              <span class="pill good" id="mapSizePill">0 x 0</span>
+            </div>
+            <div class="stat-grid">
+              <div class="stat">
+                <div class="stat__label">Width</div>
+                <div class="stat__value" id="mapWidthValue">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Height</div>
+                <div class="stat__value" id="mapHeightValue">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Selected Cell</div>
+                <div class="stat__value mono" id="selectedCellValue">none</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Mine Summary</h3>
+            <div class="pill-row">
+              <span class="pill good" id="mineCountPill">0 mines</span>
+            </div>
+            <div class="stat-grid">
+              <div class="stat">
+                <div class="stat__label">Active Mines</div>
+                <div class="stat__value" id="activeMineCount">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Defused Mines</div>
+                <div class="stat__value" id="defusedMineCount">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Total Mines</div>
+                <div class="stat__value" id="totalMineCount">0</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Rover Summary</h3>
+            <div class="pill-row">
+              <span class="pill good" id="roverCountPill">0 rovers</span>
+            </div>
+            <div class="stat-grid">
+              <div class="stat">
+                <div class="stat__label">Not Started</div>
+                <div class="stat__value" id="notStartedCount">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Finished</div>
+                <div class="stat__value" id="finishedCount">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Eliminated</div>
+                <div class="stat__value" id="eliminatedCount">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="mapSection">
+      <div class="glass-panel section__panel">
+        <div class="section-heading">
+          <div class="section-heading__left">
+            <span class="heading-sec__main">Map Control</span>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Interactive Minefield</h3>
+            <div class="muted">Click any cell to preload X and Y into the mine form.</div>
+
+            <div class="form-grid form-grid--map">
+              <div>
+                <label for="mapWidthInput">Width</label>
+                <input id="mapWidthInput" type="number" min="1" max="50" />
+              </div>
+              <div>
+                <label for="mapHeightInput">Height</label>
+                <input id="mapHeightInput" type="number" min="1" max="50" />
+              </div>
+              <div>
+                <label>Selected Cell</label>
+                <input id="selectedCellReadout" type="text" value="none" readonly />
+              </div>
+              <div>
+                <label>&nbsp;</label>
+                <button id="updateMapBtn" type="button" class="btn btn--med btn--theme" style="width:100%;">Update Map</button>
+              </div>
+            </div>
+
+            <div id="mapBoard" class="map-board"></div>
+          </div>
+
+          <div class="card" id="outputSection">
+            <h3>Dispatch Output</h3>
+            <div class="pill-row">
+              <span class="pill warn" id="dispatchPill">No rover dispatched</span>
+            </div>
+            <div id="pathOutput" class="console-box">Dispatch a rover to render path output here.</div>
+
+            <h3 style="margin-top:1.6rem;">Event Log</h3>
+            <div id="eventLog" class="console-box console-box--small">No events yet.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="mineSection">
+      <div class="glass-panel section__panel">
+        <div class="section-heading">
+          <div class="section-heading__left">
+            <span class="heading-sec__main">Mine Control</span>
+          </div>
+          <button id="mineRefreshBtn" type="button" class="btn btn--med btn--theme">Refresh Mines</button>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Create, Update, Delete Mines</h3>
+
+            <div class="form-grid">
+              <div>
+                <label for="mineIdInput">Mine ID</label>
+                <input id="mineIdInput" type="number" min="1" placeholder="Auto for create" />
+              </div>
+              <div>
+                <label for="mineXInput">X</label>
+                <input id="mineXInput" type="number" min="0" />
+              </div>
+              <div>
+                <label for="mineYInput">Y</label>
+                <input id="mineYInput" type="number" min="0" />
+              </div>
+              <div>
+                <label for="mineSerialInput">Serial Number</label>
+                <input id="mineSerialInput" type="text" placeholder="MINE-ALPHA-001" />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button id="createMineBtn" type="button" class="btn btn--med btn--theme">Create Mine</button>
+              <button id="updateMineBtn" type="button" class="btn btn--med">Update Mine</button>
+              <button id="deleteMineBtn" type="button" class="btn btn--med btn--danger">Delete Mine</button>
+              <button id="clearMineBtn" type="button" class="btn btn--med">Clear Mine Form</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Mine Records</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Coords</th>
+                  <th>Serial</th>
+                  <th>Status</th>
+                  <th>PIN</th>
+                </tr>
+              </thead>
+              <tbody id="mineTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="roverSection">
+      <div class="glass-panel section__panel">
+        <div class="section-heading">
+          <div class="section-heading__left">
+            <span class="heading-sec__main">Rover Control</span>
+          </div>
+          <button id="roverRefreshBtn" type="button" class="btn btn--med btn--theme">Refresh Rovers</button>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Create, Update, Dispatch, Delete Rovers</h3>
+
+            <div class="form-grid form-grid--rover">
+              <div>
+                <label for="roverIdInput">Rover ID</label>
+                <input id="roverIdInput" type="number" min="1" placeholder="Auto for create" />
+              </div>
+              <div>
+                <label for="roverCommandsInput">Commands</label>
+                <input id="roverCommandsInput" type="text" placeholder="Example: MMRMLDDRM" />
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button id="createRoverBtn" type="button" class="btn btn--med btn--theme">Create Rover</button>
+              <button id="updateRoverBtn" type="button" class="btn btn--med">Update Rover</button>
+              <button id="dispatchRoverBtn" type="button" class="btn btn--med btn--theme">Dispatch Rover</button>
+              <button id="deleteRoverBtn" type="button" class="btn btn--med btn--danger">Delete Rover</button>
+              <button id="clearRoverBtn" type="button" class="btn btn--med">Clear Rover Form</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Rover Records</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Status</th>
+                  <th>Position</th>
+                  <th>Direction</th>
+                  <th>Commands</th>
+                </tr>
+              </thead>
+              <tbody id="roverTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="glass-panel section__panel">
+        <div class="section-heading">
+          <div class="section-heading__left">
+            <span class="heading-sec__main">Status Console</span>
+          </div>
+        </div>
+        <div id="statusConsole" class="console-box">Ready.</div>
+      </div>
+    </section>
+
+    <footer class="main-footer" aria-label="Footer">
+      <div class="glass-panel footer__panel">
+        <div class="main-footer__upper">
+          <div>
+            <div class="heading-sm">Social</div>
+            <div class="main-footer__social-cont">
+              <a href="https://www.linkedin.com/in/krishadmin" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                <img src="https://krishadmin.com/pics/Icon-LinkedIn.png" alt="" class="main-footer__icon" />
+              </a>
+              <a href="https://github.com/KrishPAdmin" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                <img src="https://krishadmin.com/pics/Icon-Github.png" alt="" class="main-footer__icon" />
+              </a>
+              <a href="https://www.youtube.com/channel/UCPOpecefAO1ub4KB50wDmjg" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+                <img src="https://krishadmin.com/pics/Icon-Youtube.png" alt="" class="main-footer__icon" />
+              </a>
+              <a href="https://www.instagram.com/krish_admin/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                <img src="https://krishadmin.com/pics/Icon-Instagram.png" alt="" class="main-footer__icon" />
+              </a>
+              <a href="https://discord.com/users/290130274010923010" target="_blank" rel="noopener noreferrer" aria-label="Discord">
+                <img src="https://krishadmin.com/pics/Icon-Discord.png" alt="" class="main-footer__icon" />
+              </a>
+            </div>
+            <div style="margin-top:1.15rem;font-size:1.6rem;color:var(--textSub);line-height:1.7;">
+              Discord: <a href="https://discord.com/users/290130274010923010" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:underline;">DM me here</a><br />
+              Email: <a href="mailto:krish@krishadmin.com" style="color:var(--accent);text-decoration:underline;">krish@krishadmin.com</a>
+            </div>
+          </div>
+          <div>
+            <div class="heading-sm">About</div>
+            <div style="margin-top:1.15rem;font-size:1.6rem;color:var(--textSub);line-height:1.7;">
+              COE892 Lab 4 control plane for map editing, mine lifecycle management, rover command management, and dispatch visualization with a ProxSyncQ-inspired interface.
+            </div>
+          </div>
+        </div>
+        <div class="main-footer__lower">
+          © <span id="yearNow"></span> Krish Patel. Built for <a href="https://krishadmin.com" style="color:var(--accent);text-decoration:underline;">www.krishadmin.com</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <script id="initialDashboardData" type="application/json">{{ dashboard_json | safe }}</script>
+  <script>
+    (function () {
+      var initialDashboardDataEl = document.getElementById("initialDashboardData");
+      var state = {
+        data: initialDashboardDataEl ? JSON.parse(initialDashboardDataEl.textContent) : {
+          updated_at: "",
+          username: "",
+          map: { width: 8, height: 8, field: [], rendered_rows: [] },
+          mine_count: 0,
+          rover_count: 0,
+          mines: [],
+          rovers: []
+        },
+        selectedCell: null,
+        selectedMineId: null,
+        selectedRoverId: null,
+        lastDispatch: null
+      };
+
+      function byId(id) {
+        return document.getElementById(id);
+      }
+
+      function esc(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function fmt(value) {
+        if (value === null || value === undefined || value === "") return "n/a";
+        return esc(value);
+      }
+
+      function setConsole(title, payload) {
+        var content = typeof payload === "string" ? payload : JSON.stringify(payload, null, 2);
+        byId("statusConsole").textContent = title + "\n\n" + content;
+      }
+
+      async function api(path, options) {
+        var response = await fetch(path, Object.assign({
+          credentials: "same-origin",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store"
+          }
+        }, options || {}));
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+          throw new Error("Not authenticated");
+        }
+
+        var data = await response.json().catch(function () {
+          return {};
+        });
+
+        if (!response.ok) {
+          throw new Error(data.detail || ("Request failed with status " + response.status));
+        }
+
+        return data;
+      }
+
+      function mineAt(x, y) {
+        return (state.data.mines || []).find(function (mine) {
+          return mine.x === x && mine.y === y;
+        });
+      }
+
+      function roverAt(x, y) {
+        return (state.data.rovers || []).find(function (rover) {
+          return rover.latest_position && rover.latest_position.x === x && rover.latest_position.y === y;
+        });
+      }
+
+      function renderOverview() {
+        var map = state.data.map || { width: 0, height: 0 };
+        var mines = state.data.mines || [];
+        var rovers = state.data.rovers || [];
+
+        var activeMines = mines.filter(function (mine) { return mine.status === "active"; }).length;
+        var defusedMines = mines.filter(function (mine) { return mine.status === "defused"; }).length;
+        var notStarted = rovers.filter(function (rover) { return rover.status === "Not Started"; }).length;
+        var finished = rovers.filter(function (rover) { return rover.status === "Finished"; }).length;
+        var eliminated = rovers.filter(function (rover) { return rover.status === "Eliminated"; }).length;
+
+        byId("currentUser").textContent = state.data.username || "n/a";
+        byId("lastUpdated").textContent = state.data.updated_at || "n/a";
+
+        byId("mapSizePill").textContent = map.width + " x " + map.height;
+        byId("mapWidthValue").textContent = map.width;
+        byId("mapHeightValue").textContent = map.height;
+        byId("mapWidthInput").value = map.width;
+        byId("mapHeightInput").value = map.height;
+
+        byId("mineCountPill").textContent = mines.length + " mine" + (mines.length === 1 ? "" : "s");
+        byId("activeMineCount").textContent = activeMines;
+        byId("defusedMineCount").textContent = defusedMines;
+        byId("totalMineCount").textContent = mines.length;
+
+        byId("roverCountPill").textContent = rovers.length + " rover" + (rovers.length === 1 ? "" : "s");
+        byId("notStartedCount").textContent = notStarted;
+        byId("finishedCount").textContent = finished;
+        byId("eliminatedCount").textContent = eliminated;
+
+        var selectedText = state.selectedCell ? "(" + state.selectedCell.x + ", " + state.selectedCell.y + ")" : "none";
+        byId("selectedCellValue").textContent = selectedText;
+        byId("selectedCellReadout").value = selectedText;
+      }
+
+      function renderMap() {
+        var map = state.data.map || { width: 0, height: 0 };
+        var board = byId("mapBoard");
+        board.innerHTML = "";
+
+        for (var y = 0; y < map.height; y += 1) {
+          var row = document.createElement("div");
+          row.className = "map-row";
+          row.style.gridTemplateColumns = "repeat(" + map.width + ", minmax(0, 1fr))";
+
+          for (var x = 0; x < map.width; x += 1) {
+            var cell = document.createElement("button");
+            cell.type = "button";
+            cell.className = "map-cell map-cell--empty";
+
+            var mine = mineAt(x, y);
+            var rover = roverAt(x, y);
+
+            if (mine && mine.status === "active") {
+              cell.className = "map-cell map-cell--mine";
+              cell.textContent = "M" + mine.id;
+            } else if (mine && mine.status === "defused") {
+              cell.className = "map-cell map-cell--defused";
+              cell.textContent = "X" + mine.id;
+            } else {
+              cell.textContent = x + "," + y;
+            }
+
+            if (rover) {
+              cell.className = "map-cell map-cell--rover";
+              cell.textContent = "R" + rover.id;
+            }
+
+            if (state.selectedCell && state.selectedCell.x === x && state.selectedCell.y === y) {
+              cell.className += " map-cell--selected";
+            }
+
+            (function (cx, cy) {
+              cell.addEventListener("click", function () {
+                state.selectedCell = { x: cx, y: cy };
+                byId("mineXInput").value = cx;
+                byId("mineYInput").value = cy;
+                renderOverview();
+                renderMap();
+              });
+            })(x, y);
+
+            row.appendChild(cell);
+          }
+
+          board.appendChild(row);
+        }
+      }
+
+      function renderMines() {
+        var tbody = byId("mineTableBody");
+        var mines = state.data.mines || [];
+
+        if (!mines.length) {
+          tbody.innerHTML = "<tr><td colspan='5' class='mono'>No mines created yet.</td></tr>";
+          return;
+        }
+
+        tbody.innerHTML = mines.map(function (mine) {
+          var selectedClass = mine.id === state.selectedMineId ? "selected-row" : "";
+          return [
+            "<tr data-clickable='1' class='" + selectedClass + "' data-mine-id='" + esc(mine.id) + "'>",
+            "<td>" + esc(mine.id) + "</td>",
+            "<td>(" + esc(mine.x) + ", " + esc(mine.y) + ")</td>",
+            "<td class='mono'>" + esc(mine.serial_number) + "</td>",
+            "<td>" + esc(mine.status) + "</td>",
+            "<td class='mono'>" + esc(mine.pin || "-") + "</td>",
+            "</tr>"
+          ].join("");
+        }).join("");
+
+        Array.prototype.forEach.call(tbody.querySelectorAll("tr[data-mine-id]"), function (row) {
+          row.addEventListener("click", function () {
+            var mineId = Number(row.getAttribute("data-mine-id"));
+            var mine = mines.find(function (item) { return item.id === mineId; });
+            if (!mine) return;
+
+            state.selectedMineId = mine.id;
+            state.selectedCell = { x: mine.x, y: mine.y };
+
+            byId("mineIdInput").value = mine.id;
+            byId("mineXInput").value = mine.x;
+            byId("mineYInput").value = mine.y;
+            byId("mineSerialInput").value = mine.serial_number;
+
+            renderOverview();
+            renderMap();
+            renderMines();
+          });
+        });
+      }
+
+      function renderRovers() {
+        var tbody = byId("roverTableBody");
+        var rovers = state.data.rovers || [];
+
+        if (!rovers.length) {
+          tbody.innerHTML = "<tr><td colspan='5' class='mono'>No rovers created yet.</td></tr>";
+          return;
+        }
+
+        tbody.innerHTML = rovers.map(function (rover) {
+          var selectedClass = rover.id === state.selectedRoverId ? "selected-row" : "";
+          var position = rover.latest_position ? "(" + rover.latest_position.x + ", " + rover.latest_position.y + ")" : "n/a";
+          return [
+            "<tr data-clickable='1' class='" + selectedClass + "' data-rover-id='" + esc(rover.id) + "'>",
+            "<td>" + esc(rover.id) + "</td>",
+            "<td>" + esc(rover.status) + "</td>",
+            "<td class='mono'>" + esc(position) + "</td>",
+            "<td>" + esc(rover.direction) + "</td>",
+            "<td class='mono'>" + esc(rover.commands) + "</td>",
+            "</tr>"
+          ].join("");
+        }).join("");
+
+        Array.prototype.forEach.call(tbody.querySelectorAll("tr[data-rover-id]"), function (row) {
+          row.addEventListener("click", function () {
+            var roverId = Number(row.getAttribute("data-rover-id"));
+            var rover = rovers.find(function (item) { return item.id === roverId; });
+            if (!rover) return;
+
+            state.selectedRoverId = rover.id;
+            byId("roverIdInput").value = rover.id;
+            byId("roverCommandsInput").value = rover.commands;
+
+            renderRovers();
+          });
+        });
+      }
+
+      function renderDispatch() {
+        if (!state.lastDispatch) {
+          byId("dispatchPill").textContent = "No rover dispatched";
+          byId("dispatchPill").className = "pill warn";
+          byId("pathOutput").textContent = "Dispatch a rover to render path output here.";
+          byId("eventLog").textContent = "No events yet.";
+          return;
+        }
+
+        byId("dispatchPill").textContent = "Rover " + state.lastDispatch.id + " " + state.lastDispatch.status;
+        byId("dispatchPill").className = state.lastDispatch.status === "Eliminated" ? "pill bad" : "pill good";
+        byId("pathOutput").textContent = (state.lastDispatch.path_rows || []).join("\n");
+        byId("eventLog").textContent = (state.lastDispatch.events && state.lastDispatch.events.length)
+          ? state.lastDispatch.events.join("\n")
+          : "No events returned.";
+      }
+
+      function renderAll() {
+        renderOverview();
+        renderMap();
+        renderMines();
+        renderRovers();
+        renderDispatch();
+      }
+
+      async function refreshDashboard() {
+        var data = await api("/api/dashboard", { method: "GET" });
+        state.data = data;
+        renderAll();
+        return data;
+      }
+
+      function clearMineForm() {
+        state.selectedMineId = null;
+        byId("mineIdInput").value = "";
+        byId("mineSerialInput").value = "";
+        if (state.selectedCell) {
+          byId("mineXInput").value = state.selectedCell.x;
+          byId("mineYInput").value = state.selectedCell.y;
+        } else {
+          byId("mineXInput").value = "";
+          byId("mineYInput").value = "";
+        }
+        renderMines();
+      }
+
+      function clearRoverForm() {
+        state.selectedRoverId = null;
+        byId("roverIdInput").value = "";
+        byId("roverCommandsInput").value = "";
+        renderRovers();
+      }
+
+      async function createMine() {
+        var payload = {
+          x: Number(byId("mineXInput").value),
+          y: Number(byId("mineYInput").value),
+          serial_number: byId("mineSerialInput").value.trim()
+        };
+        var data = await api("/mines", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        await refreshDashboard();
+        setConsole("Mine created", data);
+      }
+
+      async function updateMine() {
+        var mineId = Number(byId("mineIdInput").value);
+        if (!mineId) throw new Error("Select a mine first.");
+
+        var payload = {};
+        if (byId("mineXInput").value !== "") payload.x = Number(byId("mineXInput").value);
+        if (byId("mineYInput").value !== "") payload.y = Number(byId("mineYInput").value);
+        if (byId("mineSerialInput").value.trim() !== "") payload.serial_number = byId("mineSerialInput").value.trim();
+
+        var data = await api("/mines/" + mineId, {
+          method: "PUT",
+          body: JSON.stringify(payload)
+        });
+        await refreshDashboard();
+        state.selectedMineId = data.id;
+        setConsole("Mine updated", data);
+      }
+
+      async function deleteMine() {
+        var mineId = Number(byId("mineIdInput").value);
+        if (!mineId) throw new Error("Select a mine first.");
+
+        var data = await api("/mines/" + mineId, { method: "DELETE" });
+        clearMineForm();
+        await refreshDashboard();
+        setConsole("Mine deleted", data);
+      }
+
+      async function updateMap() {
+        var payload = {
+          width: Number(byId("mapWidthInput").value),
+          height: Number(byId("mapHeightInput").value)
+        };
+        var data = await api("/map", {
+          method: "PUT",
+          body: JSON.stringify(payload)
+        });
+        await refreshDashboard();
+        setConsole("Map updated", data);
+      }
+
+      async function createRover() {
+        var payload = {
+          commands: byId("roverCommandsInput").value.trim().toUpperCase()
+        };
+        var data = await api("/rovers", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        await refreshDashboard();
+        state.selectedRoverId = data.id;
+        setConsole("Rover created", data);
+      }
+
+      async function updateRover() {
+        var roverId = Number(byId("roverIdInput").value);
+        if (!roverId) throw new Error("Select a rover first.");
+
+        var payload = {
+          commands: byId("roverCommandsInput").value.trim().toUpperCase()
+        };
+        var data = await api("/rovers/" + roverId, {
+          method: "PUT",
+          body: JSON.stringify(payload)
+        });
+        await refreshDashboard();
+        state.selectedRoverId = data.id;
+        setConsole("Rover updated", data);
+      }
+
+      async function deleteRover() {
+        var roverId = Number(byId("roverIdInput").value);
+        if (!roverId) throw new Error("Select a rover first.");
+
+        var data = await api("/rovers/" + roverId, { method: "DELETE" });
+        clearRoverForm();
+        await refreshDashboard();
+        setConsoleForm();
+        await refreshDashboard();
+        setConsole("Rover deleted", data);
+      }
+
+      async function dispatchRover() {
+        var roverId = Number(byId("roverIdInput").value);
+        if (!roverId) throw new Error("Select a rover first.");
+
+        var data = await api("/rovers/" + roverId + "/dispatch", { method: "POST" });
+        state.lastDispatch = data;
+        await refreshDashboard();
+        state.selectedRoverId = data.id;
+        renderDispatch();
+        setConsole("Rover dispatched", data);
+      }
+
+      async function resetDemo() {
+        var data = await api("/ui/reset-demo", { method: "POST" });
+        state.lastDispatch = null;
+        state.selectedCell = null;
+        state.selectedMineId = null;
+        state.selectedRoverId = null;
+        clearMineForm();
+        clearRoverForm();
+        await refreshDashboard();
+        renderDispatch();
+        setConsole("Demo reset", data);
+      }
+
+      function bindEvents() {
+        byId("pageRefreshBtn").addEventListener("click", function () {
+          refreshDashboard().then(function (data) {
+            setConsole("Dashboard refreshed", data);
+          }).catch(function (error) {
+            setConsole("Refresh failed", error.message);
+          });
+        });
+
+        byId("mineRefreshBtn").addEventListener("click", function () {
+          refreshDashboard().then(function (data) {
+            setConsole("Mine view refreshed", data);
+          }).catch(function (error) {
+            setConsole("Mine refresh failed", error.message);
+          });
+        });
+
+        byId("roverRefreshBtn").addEventListener("click", function () {
+          refreshDashboard().then(function (data) {
+            setConsole("Rover view refreshed", data);
+          }).catch(function (error) {
+            setConsole("Rover refresh failed", error.message);
+          });
+        });
+
+        byId("resetDemoBtn").addEventListener("click", function () {
+          resetDemo().catch(function (error) {
+            setConsole("Reset failed", error.message);
+          });
+        });
+
+        byId("updateMapBtn").addEventListener("click", function () {
+          updateMap().catch(function (error) {
+            setConsole("Map update failed", error.message);
+          });
+        });
+
+        byId("createMineBtn").addEventListener("click", function () {
+          createMine().catch(function (error) {
+            setConsole("Create mine failed", error.message);
+          });
+        });
+
+        byId("updateMineBtn").addEventListener("click", function () {
+          updateMine().catch(function (error) {
+            setConsole("Update mine failed", error.message);
+          });
+        });
+
+        byId("deleteMineBtn").addEventListener("click", function () {
+          deleteMine().catch(function (error) {
+            setConsole("Delete mine failed", error.message);
+          });
+        });
+
+        byId("clearMineBtn").addEventListener("click", function () {
+          clearMineForm();
+        });
+
+        byId("createRoverBtn").addEventListener("click", function () {
+          createRover().catch(function (error) {
+            setConsole("Create rover failed", error.message);
+          });
+        });
+
+        byId("updateRoverBtn").addEventListener("click", function () {
+          updateRover().catch(function (error) {
+            setConsole("Update rover failed", error.message);
+          });
+        });
+
+        byId("deleteRoverBtn").addEventListener("click", function () {
+          deleteRover().catch(function (error) {
+            setConsole("Delete rover failed", error.message);
+          });
+        });
+
+        byId("dispatchRoverBtn").addEventListener("click", function () {
+          dispatchRover().catch(function (error) {
+            setConsole("Dispatch rover failed", error.message);
+          });
+        });
+
+        byId("clearRoverBtn").addEventListener("click", function () {
+          clearRoverForm();
+        });
+      }
+
+      byId("yearNow").textContent = String(new Date().getFullYear());
+      bindEvents();
+      renderAll();
+
+      setInterval(function () {
+        if (!document.hidden) {
+          refreshDashboard().catch(function () {});
+        }
+      }, 20000);
+    })();
+  </script>
+</body>
+</html>
